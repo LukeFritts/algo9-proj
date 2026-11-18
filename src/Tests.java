@@ -154,8 +154,19 @@ public class Tests {
         //   unreachable vertices, ties, zero-weight edges, parallel edges,
         //   self-loops, and a graph with one vertex.
 
-        // TODO (Luke): add random graphs from GraphGenerator,
-        //   V = 100 and 300, all three densities, a few seeds each.
+        // add random graphs from GraphGenerator,
+        // V = 100 and 300, all three densities, a few seeds each.
+
+        int[] randomGraphVertexCount = {100, 300};
+        for (int v : randomGraphVertexCount) {
+            for (GraphGenerator.Density density : GraphGenerator.Density.values()) {
+                for (long seed = 1; seed <= 3; seed++) {
+                    
+                    graphs.add(GraphGenerator.generate(v, density, seed));
+
+                }
+            }
+        }
 
         return graphs;
     }

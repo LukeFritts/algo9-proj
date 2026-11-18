@@ -46,8 +46,8 @@ Alex's setup (done)
 
 ## Luke
 
-- [ ] Random graphs in `Tests.java` → `testGraphs()`: V = 100 and 300, all 3 densities, a few seeds
-- [ ] Benchmark harness, `Benchmark.java` (steps are in the TODO): warm up JVM, repeat runs, don't time generation or file I/O, CSV out, write down hardware / JVM version / heap settings
+- [x] Random graphs in `Tests.java` → `testGraphs()`: V = 100 and 300, all 3 densities, a few seeds
+- [x] Benchmark harness, `Benchmark.java` (steps are in the TODO): warm up JVM, repeat runs, don't time generation or file I/O, CSV out, write down hardware / JVM version / heap settings
 - [ ] Counting runs separate from timing runs (`Counters.on()` vs `Counters.off()`)
 - [ ] Big graphs (V = 10k, 100k, sparse): check the two heaps give the same answers
 - [ ] Pilot run (Sun): make sure sizes work, note any time/memory limits
