@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 import java.io.*;
 import java.nio.file.*;
@@ -31,7 +32,23 @@ public class Benchmark {
     static final int GRAPHS_PER_SETUP = 10;   // seeds 1..10
     static final int TIMED_REPEATS = 5;       // timed runs per graph (pick what the pilot run says is OK)
 
-    static final List<ShortestPathAlgorithm> VERSIONS = List.of(new IndexedHeapDijkstra()); //Tests.VERSIONS; ** CHANGED TEMPORARILY WHILE WAITING FOR OTHER METHODS
+    /** Every version that's finished. Unfinished ones get skipped, so the full run picks them up once they're done. */
+    static final List<ShortestPathAlgorithm> VERSIONS = finishedVersions();
+
+    /** Tries each version on a tiny graph and keeps the ones that don't say "not done yet". */
+    static List<ShortestPathAlgorithm> finishedVersions() {
+        List<ShortestPathAlgorithm> done = new ArrayList<>();
+        Graph tiny = GraphGenerator.generate(5, GraphGenerator.Density.SPARSE, 1);
+        for (ShortestPathAlgorithm version : Tests.VERSIONS) {
+            try {
+                version.run(tiny, GraphGenerator.SOURCE, Counters.off());
+                done.add(version);
+            } catch (UnsupportedOperationException e) {
+                System.out.println("Skipping " + version.name() + ": not done yet");
+            }
+        }
+        return done;
+    }
 
     public static void main(String[] args) throws Exception {
         printMachineInfo();
@@ -57,11 +74,12 @@ public class Benchmark {
 
         // what will go into times.csv
         StringBuilder csv = new StringBuilder();
-        csv.append("version, V, E, density, seed, repeat, nanos").append("\n");
+        // plain commas (no spaces) so Python / spreadsheets read the column names cleanly
+        csv.append("version,V,E,density,seed,repeat,nanos").append("\n");
 
         // what will go into counts.csv
         StringBuilder countsCsv = new StringBuilder();
-        countsCsv.append("version, V, E, density, seed, ").append(Counters.csvHeader().replace(",", ", ")).append("\n");
+        countsCsv.append("version,V,E,density,seed,").append(Counters.csvHeader()).append("\n");
 
 
 
@@ -87,12 +105,12 @@ public class Benchmark {
                             version.run(g, GraphGenerator.SOURCE, Counters.off());
                             long nanos = System.nanoTime() - start;
 
-                            csv.append(version.name()).append(", ")
-                                .append(size).append(", ")
-                                .append(edges).append(", ")
-                                .append(density).append(", ")
-                                .append(seed).append(", ")
-                                .append(repeat).append(", ")
+                            csv.append(version.name()).append(",")
+                                .append(size).append(",")
+                                .append(edges).append(",")
+                                .append(density).append(",")
+                                .append(seed).append(",")
+                                .append(repeat).append(",")
                                 .append(nanos).append("\n");
 
                         }
@@ -101,12 +119,12 @@ public class Benchmark {
                         Counters counters = Counters.on();
                         version.run(g, GraphGenerator.SOURCE, counters);
 
-                        countsCsv.append(version.name()).append(", ")
-                            .append(size).append(", ")
-                            .append(edges).append(", ")
-                            .append(density).append(", ")
-                            .append(seed).append(", ")
-                            .append(counters.toCsvRow().replace(",", ", ")).append("\n");
+                        countsCsv.append(version.name()).append(",")
+                            .append(size).append(",")
+                            .append(edges).append(",")
+                            .append(density).append(",")
+                            .append(seed).append(",")
+                            .append(counters.toCsvRow()).append("\n");
 
                     }
 
@@ -141,12 +159,12 @@ public class Benchmark {
                         version.run(g, GraphGenerator.SOURCE, Counters.off());
                         long nanos = System.nanoTime() - start;
 
-                        csv.append(version.name()).append(", ")
-                            .append(size).append(", ")
-                            .append(edges).append(", ")
-                            .append(GraphGenerator.Density.SPARSE).append(", ")
-                            .append(seed).append(", ")
-                            .append(repeat).append(", ")
+                        csv.append(version.name()).append(",")
+                            .append(size).append(",")
+                            .append(edges).append(",")
+                            .append(GraphGenerator.Density.SPARSE).append(",")
+                            .append(seed).append(",")
+                            .append(repeat).append(",")
                             .append(nanos).append("\n");
 
                     }
@@ -155,12 +173,12 @@ public class Benchmark {
                     Counters counters = Counters.on();
                     version.run(g, GraphGenerator.SOURCE, counters);
 
-                    countsCsv.append(version.name()).append(", ")
-                        .append(size).append(", ")
-                        .append(edges).append(", ")
-                        .append(GraphGenerator.Density.SPARSE).append(", ")
-                        .append(seed).append(", ")
-                        .append(counters.toCsvRow().replace(",", ", ")).append("\n");
+                    countsCsv.append(version.name()).append(",")
+                        .append(size).append(",")
+                        .append(edges).append(",")
+                        .append(GraphGenerator.Density.SPARSE).append(",")
+                        .append(seed).append(",")
+                        .append(counters.toCsvRow()).append("\n");
 
                 }
             }
@@ -176,7 +194,7 @@ public class Benchmark {
         Files.writeString(Paths.get("results/counts.csv"), countsCsv.toString());
 
         System.out.println(
-            "\nBenhcmarks done, saved to 'results/times.csv' and 'results/counts.csv'."
+            "\nBenchmarks done, saved to 'results/times.csv' and 'results/counts.csv'."
         );
 
     }
