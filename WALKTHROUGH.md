@@ -50,15 +50,24 @@ Alex's setup (done)
 - [x] Benchmark harness, `Benchmark.java` (steps are in the TODO): warm up JVM, repeat runs, don't time generation or file I/O, CSV out, write down hardware / JVM version / heap settings
 - [x] Counting runs separate from timing runs (`Counters.on()` vs `Counters.off()`)
 - [x] Big graphs (V = 10k, 100k, sparse) in the benchmark
-- [ ] Check the two heaps give the same answers on those big graphs (lazy heap is in now)
 - [x] Pilot run (Sun): make sure sizes work, note any time/memory limits
-- [ ] Full run: all 3 versions pass now, takes about 20 seconds
-- [ ] Repeat the main runs (Wed)
-- [ ] Results + crossover: where one version starts beating another at each density
+
+Left to do (tonight, in this order):
+
+- [ ] Full run, about 20 seconds:
+  ```bash
+  git pull
+  javac -d out src/*.java && java -Xmx4g -cp out Benchmark
+  ```
+  Write down what it prints about the machine, plus your CPU model and RAM from your system settings (we said we'd record those).
+- [ ] Repeat run: the benchmark overwrites the CSVs, so first rename them to `results/times-run1.csv` and `results/counts-run1.csv`, then run it again. If the medians from both runs are close, the results are stable.
+- [ ] Check the two heaps agree on the big graphs: Bellman-Ford is too slow at V = 10k and 100k, so run the indexed heap and lazy heap on the same sparse graph and check their `dist` arrays match. About 10 lines, e.g. a small test in `Tests.java`.
+- [ ] Crossover: from the CSVs, which version is fastest at each size and density, and where the winner changes. A few lines or a small table in `results/crossover.md` is enough.
+- [ ] Push it all in a PR: both runs' CSVs, the heap check and the crossover notes.
 
 ## Slides
 
-Deck is in Google Slides (ask Alex for the link). Everything's done except:
+Deck is in Google Slides. Everything's done except:
 
 - [ ] Runtime plots, theory curves on top (Alex, needs Luke's CSVs)
 - [ ] Crossover + op counts (Luke and Alex, needs the full run)
