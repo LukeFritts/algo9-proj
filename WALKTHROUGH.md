@@ -24,21 +24,21 @@ Alex's setup (done)
 
 - [x] Setup: Graph, generator, Bellman-Ford checker, interface, Counters, tests
 - [x] Indexed heap version, `IndexedHeapDijkstra.java`
-- [x] Demo program, `Demo.java` (picks up your version automatically once it's done)
+- [x] Demo program, `Demo.java` (picks up your version automatically once it's done), now with edge cases and queue size
 - [ ] Review PRs
-- [ ] Slides: system design + UML (2+), development strategy (5+)
+- [x] Slides: everything except results (see Slides below)
 - [ ] Report, later: lit review, methods for my part
 
 ## Alsean
 
 - [ ] Array version, `ArrayDijkstra.java` (steps are in the TODO)
 - [ ] Edge-case graphs in `Tests.java` → `testGraphs()`: unreachable vertices, ties, zero-weight edges, parallel edges, self-loops, one vertex
-- [ ] Requirements slide (functional + non-functional)
+- [x] Requirements slide (Alex did it, give it a look)
 - [ ] Report, later: put it together, write intro, objectives, conclusion
 
 ## Anthony
 
-- [ ] Lazy heap version, `LazyHeapDijkstra.java` (steps are in the TODO)
+- [ ] Lazy heap version, `LazyHeapDijkstra.java` (steps are in the TODO). Call `recordQueueSize()` so the demo can show your queue size
 - [ ] Check every version counts the right things (see `Counters.java`)
 - [ ] Plots, once Luke has CSVs: time vs E (log-log) with the theory curves on top, time ratios per density, op counts, queue sizes
 - [ ] Results slides (3+)
@@ -54,6 +54,17 @@ Alex's setup (done)
 - [ ] Full run (Mon), once all 3 versions pass
 - [ ] Repeat the main runs (Wed)
 - [ ] Results + crossover: where one version starts beating another at each density
+
+## Slides
+
+Deck is in Google Slides (ask Alex for the link). Everything's done except:
+
+- [ ] Runtime plots, theory curves on top (Anthony, needs Luke's CSVs)
+- [ ] Crossover + op counts (Luke and Anthony, needs the full run)
+- [ ] Conclusion: what we found (Alsean, needs results). Lessons learned and future work can go in now
+- [ ] Screenshot of a merged PR on the GitHub workflow slide (whoever merges first)
+
+Keep slide titles as the takeaway ("Heaps win on sparse graphs"), not just a label ("Results").
 
 ## Dates
 

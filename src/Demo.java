@@ -1,18 +1,21 @@
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The live demo for the presentation (3 minutes max). Owner: Alex.
  *
  * Runs every finished version on a graph, prints the shortest distance and
- * path to a target, checks all versions agree, and shows how long each took.
+ * path to a target, checks all versions agree, and shows how long each took
+ * and the biggest the queue got (our memory measure).
  *
  * Ways to run it (from the repo folder, after javac -d out src/*.java):
  *
  *   java -Xmx2g -cp out Demo
- *       The full demo: the small graph in graphs/demo.txt, then a big dense
- *       graph, then a big sparse graph.
+ *       The full demo: the small graph in graphs/demo.txt, the edge cases in
+ *       graphs/edge-cases.txt, then a big dense graph and a big sparse graph.
  *
  *   java -cp out Demo file graphs/demo.txt 0 6
  *       Any graph file, from source 0 to target 6.
@@ -48,28 +51,68 @@ public class Demo {
     /**
      * The demo we show in the presentation:
      * 1. A tiny graph everyone can follow on a slide.
-     * 2. A big dense graph, where the array scan should hold up well.
-     * 3. A big sparse graph, where the heaps should pull ahead.
+     * 2. Edge cases: unreachable vertex, zero weight, tie, parallel edge, self-loop.
+     * 3. A big dense graph, where the array scan should hold up well.
+     * 4. A big sparse graph, where the heaps should pull ahead.
      */
     static void fullDemo() throws Exception {
         runAll("1) Small graph (graphs/demo.txt)", Graph.load("graphs/demo.txt"), 0, 6);
 
+        edgeCaseDemo();
+
         Graph dense = GraphGenerator.generate(3000, GraphGenerator.Density.DENSE, 1);
-        runAll("2) Dense graph, V = 3,000", dense, GraphGenerator.SOURCE, 2999);
+        runAll("3) Dense graph, V = 3,000", dense, GraphGenerator.SOURCE, 2999);
 
         Graph sparse = GraphGenerator.generate(20_000, GraphGenerator.Density.SPARSE, 1);
-        runAll("3) Sparse graph, V = 20,000", sparse, GraphGenerator.SOURCE, 19_999);
+        runAll("4) Sparse graph, V = 20,000", sparse, GraphGenerator.SOURCE, 19_999);
     }
 
-    /** Runs every finished version on g and prints the results side by side. */
-    static void runAll(String title, Graph g, int source, int target) {
+    /**
+     * graphs/edge-cases.txt has one of each tricky input:
+     *
+     *   0 -> 1 (0)            zero-weight edge
+     *   0 -> 2 (5), 0 -> 2 (3) parallel edges: the cheaper one (3) should win
+     *   0 -> 1 -> 3 = 4 and 0 -> 2 -> 3 = 4    a tie: either path is right
+     *   3 -> 3 (7)            self-loop: should be ignored
+     *   5 -> 4 (1)            vertex 5 has no way in, so it's unreachable
+     *
+     * Expected distances from 0: 0, 0, 3, 4, 6, unreachable
+     */
+    static void edgeCaseDemo() throws Exception {
+        Graph g = Graph.load("graphs/edge-cases.txt");
+        Map<String, Result> results = runAll("2) Edge cases (graphs/edge-cases.txt)", g, 0, 4);
+
+        // Show every vertex, not just one target, so each edge case is visible.
+        long[] expected = {0, 0, 3, 4, 6, Result.INFINITY};
+        System.out.println();
+        System.out.printf("  Every vertex:  %-13s %s%n", "expected", showAll(expected));
+        for (Map.Entry<String, Result> e : results.entrySet()) {
+            String verdict = Arrays.equals(expected, e.getValue().dist()) ? "ok" : "WRONG";
+            System.out.printf("                 %-13s %s   %s%n", e.getKey(), showAll(e.getValue().dist()), verdict);
+        }
+    }
+
+    /** All distances on one line, e.g. "0 0 3 4 6 -". A dash means unreachable. */
+    static String showAll(long[] dist) {
+        StringBuilder sb = new StringBuilder();
+        for (long d : dist) {
+            sb.append(String.format("%-3s", d == Result.INFINITY ? "-" : Long.toString(d)));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Runs every finished version on g and prints the results side by side.
+     * Returns each finished version's result, by name.
+     */
+    static Map<String, Result> runAll(String title, Graph g, int source, int target) {
         System.out.println();
         System.out.println("=== " + title + " ===");
         System.out.println("V = " + g.vertexCount() + ", E = " + g.edgeCount()
                 + ", from " + source + " to " + target);
         System.out.println();
 
-        List<Result> results = new ArrayList<>();
+        Map<String, Result> results = new LinkedHashMap<>();   // keeps the versions in order
 
         for (ShortestPathAlgorithm version : Tests.VERSIONS) {
             try {
@@ -81,9 +124,15 @@ public class Demo {
                 Result r = version.run(g, source, Counters.off());
                 double ms = (System.nanoTime() - start) / 1_000_000.0;
 
-                results.add(r);
-                System.out.printf("  %-13s %8.2f ms   distance %s   path %s%n",
-                        version.name(), ms, showDistance(r.dist()[target]), showPath(r.pathTo(target)));
+                // One more run with counting on, to get the biggest queue size.
+                // It's separate so counting doesn't slow down the timed run.
+                Counters counts = Counters.on();
+                version.run(g, source, counts);
+                String queue = counts.maxQueueSize == 0 ? "no queue" : "queue " + counts.maxQueueSize;
+
+                results.put(version.name(), r);
+                System.out.printf("  %-13s %8.2f ms   %-14s distance %s   path %s%n",
+                        version.name(), ms, queue, showDistance(r.dist()[target]), showPath(r.pathTo(target)));
             } catch (UnsupportedOperationException e) {
                 System.out.printf("  %-13s not done yet%n", version.name());
             }
@@ -93,15 +142,16 @@ public class Demo {
         System.out.println();
         if (results.size() < 2) {
             System.out.println("  (need at least 2 finished versions to compare)");
-        } else if (allSameDistances(results)) {
+        } else if (allSameDistances(results.values())) {
             System.out.println("  All versions agree on every distance.");
         } else {
             System.out.println("  WARNING: versions disagree! Run Tests to find out which one is wrong.");
         }
+        return results;
     }
 
-    static boolean allSameDistances(List<Result> results) {
-        long[] first = results.get(0).dist();
+    static boolean allSameDistances(Collection<Result> results) {
+        long[] first = results.iterator().next().dist();
         for (Result r : results) {
             if (!Arrays.equals(first, r.dist())) {
                 return false;
