@@ -36,9 +36,7 @@ public class Benchmark {
     public static void main(String[] args) throws Exception {
         printMachineInfo();
 
-        // 1. Warm up: run each version on a few medium graphs a bunch of times
-        //    and throw the times away. Java speeds code up after it's run a
-        //    while, so the first runs are always slow and would mess up results.
+        // Warm up. Runs each version on a few medium graphs a bunch of times and throws the times away.
         
         System.out.println("Doing warmup...");
 
@@ -53,9 +51,7 @@ public class Benchmark {
 
         System.out.println("Warmup done.\n");
 
-        // 2. Timing runs. For each size in SIZES, each Density, each seed 1..10:
-        //      Graph g = GraphGenerator.generate(size, density, seed);   // not timed
-    
+
         
         GraphGenerator.Density[] densities = GraphGenerator.Density.values();
 
@@ -67,6 +63,9 @@ public class Benchmark {
         StringBuilder countsCsv = new StringBuilder();
         countsCsv.append("version, V, E, density, seed, ").append(Counters.csvHeader().replace(",", ", ")).append("\n");
 
+
+
+        // BENCHMARKS START
         System.out.println("Doing benchmarks...");
 
         for (int size : SIZES) {
@@ -77,12 +76,10 @@ public class Benchmark {
                     int edges = g.edgeCount();
 
                     System.out.println("Testing size " + size + ", density " + density + ", seed " + seed);
-                    
-                    // 3. (TODO) Counting runs. Same graphs, but run each version once with
-                    //    Counters.on() and write a second CSV:
-                    //      version, V, E, density, seed, then Counters.csvHeader() columns
 
                     for (ShortestPathAlgorithm version : VERSIONS) {
+
+                        // timing runs
                         for (int repeat = 1; repeat <= TIMED_REPEATS; repeat++) {
                             
                             // run and log time
@@ -90,7 +87,6 @@ public class Benchmark {
                             version.run(g, GraphGenerator.SOURCE, Counters.off());
                             long nanos = System.nanoTime() - start;
 
-                            // add to times csv with run and time information
                             csv.append(version.name()).append(", ")
                                 .append(size).append(", ")
                                 .append(edges).append(", ")
@@ -101,7 +97,7 @@ public class Benchmark {
 
                         }
 
-                        //counters
+                        //  counting runs
                         Counters counters = Counters.on();
                         version.run(g, GraphGenerator.SOURCE, counters);
 
@@ -119,7 +115,7 @@ public class Benchmark {
         }
 
         // Big sparse graphs
-        System.out.println("Doing big sparse benchmarks...");
+        System.out.println("\nDoing big sparse benchmarks...\n");
 
         for (int size : BIG_SPARSE_SIZES) {
             for (int seed = 1; seed <= GRAPHS_PER_SETUP; seed++) {
@@ -137,6 +133,7 @@ public class Benchmark {
                         continue;
                     }
 
+                    // timing runs
                     for (int repeat = 1; repeat <= TIMED_REPEATS; repeat++) {
                         
                         // run and log time
@@ -144,18 +141,17 @@ public class Benchmark {
                         version.run(g, GraphGenerator.SOURCE, Counters.off());
                         long nanos = System.nanoTime() - start;
 
-                        // make csv with run and time information
                         csv.append(version.name()).append(", ")
-                        .append(size).append(", ")
-                        .append(edges).append(", ")
-                        .append(GraphGenerator.Density.SPARSE).append(", ")
-                        .append(seed).append(", ")
-                        .append(repeat).append(", ")
-                        .append(nanos).append("\n");
+                            .append(size).append(", ")
+                            .append(edges).append(", ")
+                            .append(GraphGenerator.Density.SPARSE).append(", ")
+                            .append(seed).append(", ")
+                            .append(repeat).append(", ")
+                            .append(nanos).append("\n");
 
                     }
 
-                    //counters
+                    // counting runs
                     Counters counters = Counters.on();
                     version.run(g, GraphGenerator.SOURCE, counters);
 
@@ -170,22 +166,19 @@ public class Benchmark {
             }
         }
 
-        // 4. Save to results/times.csv and results/counts.csv
-        //    (make the results folder if it isn't there).
-        //
-        // Median + IQR can be worked out from the CSV later (Python or a
-        // spreadsheet), so the harness only needs to save the raw times.
 
-        // create results folder if doesn't exist, and write csv string to times.csv inside
+
+        // create results folder if doesn't exist
         Files.createDirectories(Paths.get("results"));
+
+        // write to csv files inside
         Files.writeString(Paths.get("results/times.csv"), csv.toString());
         Files.writeString(Paths.get("results/counts.csv"), countsCsv.toString());
 
         System.out.println(
-            "\nBenhcmarks done, saved to 'results/times.csv'."
+            "\nBenhcmarks done, saved to 'results/times.csv' and 'results/counts.csv'."
         );
 
-        System.out.println("Benchmark not finished yet, still needs counting runs.");
     }
 
     /** Prints what we need to write down about the machine (proposal section 4). */
