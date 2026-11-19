@@ -1,4 +1,6 @@
 import java.util.List;
+import java.io.*;
+import java.nio.file.*;
 
 /**
  * Times every version on the benchmark graphs and saves the results as CSV.
@@ -29,39 +31,154 @@ public class Benchmark {
     static final int GRAPHS_PER_SETUP = 10;   // seeds 1..10
     static final int TIMED_REPEATS = 5;       // timed runs per graph (pick what the pilot run says is OK)
 
-    static final List<ShortestPathAlgorithm> VERSIONS = Tests.VERSIONS;
+    static final List<ShortestPathAlgorithm> VERSIONS = List.of(new IndexedHeapDijkstra()); //Tests.VERSIONS; ** CHANGED TEMPORARILY WHILE WAITING FOR OTHER METHODS
 
     public static void main(String[] args) throws Exception {
         printMachineInfo();
 
-        // TODO (Luke): the steps, in order
-        //
-        // 1. Warm up: run each version on a few medium graphs a bunch of times
-        //    and throw the times away. Java speeds code up after it's run a
-        //    while, so the first runs are always slow and would mess up results.
-        //
-        // 2. Timing runs. For each size in SIZES, each Density, each seed 1..10:
-        //      Graph g = GraphGenerator.generate(size, density, seed);   // not timed
-        //      for each version:
-        //          repeat TIMED_REPEATS times:
-        //              long start = System.nanoTime();
-        //              version.run(g, GraphGenerator.SOURCE, Counters.off());
-        //              long nanos = System.nanoTime() - start;
-        //              -> one CSV row: version, V, E, density, seed, repeat, nanos
-        //    Then the same for BIG_SPARSE_SIZES, heap versions only
-        //    (skip the one whose name() is "array").
-        //
-        // 3. Counting runs. Same graphs, but run each version once with
-        //    Counters.on() and write a second CSV:
-        //      version, V, E, density, seed, then Counters.csvHeader() columns
-        //
-        // 4. Save to results/times.csv and results/counts.csv
-        //    (make the results folder if it isn't there).
-        //
-        // Median + IQR can be worked out from the CSV later (Python or a
-        // spreadsheet), so the harness only needs to save the raw times.
+        // Warm up. Runs each version on a few medium graphs a bunch of times and throws the times away.
+        
+        System.out.println("Doing warmup...");
 
-        System.out.println("Benchmark not written yet.");
+        Graph warmupGraph = GraphGenerator.generate(1000, GraphGenerator.Density.MEDIUM, 111);
+
+        // run every algorithm 10 times on medium graph
+        for(ShortestPathAlgorithm version : VERSIONS) {
+            for (int i = 0; i < 10; i++) {
+                version.run(warmupGraph, GraphGenerator.SOURCE, Counters.off());
+            }
+        }
+
+        System.out.println("Warmup done.\n");
+
+
+        
+        GraphGenerator.Density[] densities = GraphGenerator.Density.values();
+
+        // what will go into times.csv
+        StringBuilder csv = new StringBuilder();
+        csv.append("version, V, E, density, seed, repeat, nanos").append("\n");
+
+        // what will go into counts.csv
+        StringBuilder countsCsv = new StringBuilder();
+        countsCsv.append("version, V, E, density, seed, ").append(Counters.csvHeader().replace(",", ", ")).append("\n");
+
+
+
+        // BENCHMARKS START
+        System.out.println("Doing benchmarks...");
+
+        for (int size : SIZES) {
+            for (GraphGenerator.Density density : densities) {
+                for (int seed = 1; seed <= GRAPHS_PER_SETUP; seed++) {
+
+                    Graph g = GraphGenerator.generate(size, density, seed);
+                    int edges = g.edgeCount();
+
+                    System.out.println("Testing size " + size + ", density " + density + ", seed " + seed);
+
+                    for (ShortestPathAlgorithm version : VERSIONS) {
+
+                        // timing runs
+                        for (int repeat = 1; repeat <= TIMED_REPEATS; repeat++) {
+                            
+                            // run and log time
+                            long start = System.nanoTime();
+                            version.run(g, GraphGenerator.SOURCE, Counters.off());
+                            long nanos = System.nanoTime() - start;
+
+                            csv.append(version.name()).append(", ")
+                                .append(size).append(", ")
+                                .append(edges).append(", ")
+                                .append(density).append(", ")
+                                .append(seed).append(", ")
+                                .append(repeat).append(", ")
+                                .append(nanos).append("\n");
+
+                        }
+
+                        //  counting runs
+                        Counters counters = Counters.on();
+                        version.run(g, GraphGenerator.SOURCE, counters);
+
+                        countsCsv.append(version.name()).append(", ")
+                            .append(size).append(", ")
+                            .append(edges).append(", ")
+                            .append(density).append(", ")
+                            .append(seed).append(", ")
+                            .append(counters.toCsvRow().replace(",", ", ")).append("\n");
+
+                    }
+
+                }
+            }
+        }
+
+        // Big sparse graphs
+        System.out.println("\nDoing big sparse benchmarks...\n");
+
+        for (int size : BIG_SPARSE_SIZES) {
+            for (int seed = 1; seed <= GRAPHS_PER_SETUP; seed++) {
+
+                // only doing big sparse graphs, no need for variable density
+                Graph g = GraphGenerator.generate(size, GraphGenerator.Density.SPARSE, seed);
+                int edges = g.edgeCount();
+
+                System.out.println("Testing size " + size + ", density " + GraphGenerator.Density.SPARSE + ", seed " + seed);
+
+                for (ShortestPathAlgorithm version : VERSIONS) {
+
+                    // skip version name() "array"
+                    if (version.name().equals("array")) {
+                        continue;
+                    }
+
+                    // timing runs
+                    for (int repeat = 1; repeat <= TIMED_REPEATS; repeat++) {
+                        
+                        // run and log time
+                        long start = System.nanoTime();
+                        version.run(g, GraphGenerator.SOURCE, Counters.off());
+                        long nanos = System.nanoTime() - start;
+
+                        csv.append(version.name()).append(", ")
+                            .append(size).append(", ")
+                            .append(edges).append(", ")
+                            .append(GraphGenerator.Density.SPARSE).append(", ")
+                            .append(seed).append(", ")
+                            .append(repeat).append(", ")
+                            .append(nanos).append("\n");
+
+                    }
+
+                    // counting runs
+                    Counters counters = Counters.on();
+                    version.run(g, GraphGenerator.SOURCE, counters);
+
+                    countsCsv.append(version.name()).append(", ")
+                        .append(size).append(", ")
+                        .append(edges).append(", ")
+                        .append(GraphGenerator.Density.SPARSE).append(", ")
+                        .append(seed).append(", ")
+                        .append(counters.toCsvRow().replace(",", ", ")).append("\n");
+
+                }
+            }
+        }
+
+
+
+        // create results folder if doesn't exist
+        Files.createDirectories(Paths.get("results"));
+
+        // write to csv files inside
+        Files.writeString(Paths.get("results/times.csv"), csv.toString());
+        Files.writeString(Paths.get("results/counts.csv"), countsCsv.toString());
+
+        System.out.println(
+            "\nBenhcmarks done, saved to 'results/times.csv' and 'results/counts.csv'."
+        );
+
     }
 
     /** Prints what we need to write down about the machine (proposal section 4). */
