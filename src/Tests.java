@@ -42,6 +42,9 @@ public class Tests {
         System.out.println("\n== Dijkstra versions ==");
         testVersions();
 
+        System.out.println("\n== Counters ==");
+        testCounters();
+
         System.out.println("\n" + passed + " passed, " + failed + " failed");
         if (failed > 0) {
             System.exit(1);
@@ -150,9 +153,8 @@ public class Tests {
         List<Graph> graphs = new ArrayList<>();
         graphs.add(smallGraph());
 
-        // TODO (Alsean): add the edge-case graphs from the proposal:
-        //   unreachable vertices, ties, zero-weight edges, parallel edges,
-        //   self-loops, and a graph with one vertex.
+        // Edge cases from the proposal (section 4)
+        graphs.addAll(edgeCaseGraphs());
 
         // add random graphs from GraphGenerator,
         // V = 100 and 300, all three densities, a few seeds each.
@@ -169,6 +171,117 @@ public class Tests {
         }
 
         return graphs;
+    }
+
+    /**
+     * One small graph per edge case. Every version runs from vertex 0 and has
+     * to match Bellman-Ford on each of them.
+     */
+    static List<Graph> edgeCaseGraphs() {
+        List<Graph> graphs = new ArrayList<>();
+
+        // One vertex, no edges: the source is the only vertex
+        graphs.add(new Graph(1));
+
+        // Unreachable vertices: 2 and 3 have no way in from 0
+        Graph unreachable = new Graph(4);
+        unreachable.addEdge(0, 1, 5);
+        unreachable.addEdge(2, 3, 1);
+        unreachable.addEdge(3, 0, 1);   // edges out of unreachable vertices don't matter
+        graphs.add(unreachable);
+
+        // Source with no edges out: everything else is unreachable
+        Graph stuck = new Graph(3);
+        stuck.addEdge(1, 2, 4);
+        graphs.add(stuck);
+
+        // Ties: 0 -> 1 -> 3 and 0 -> 2 -> 3 both cost 4, either parent is fine
+        Graph ties = new Graph(4);
+        ties.addEdge(0, 1, 2);
+        ties.addEdge(0, 2, 3);
+        ties.addEdge(1, 3, 2);
+        ties.addEdge(2, 3, 1);
+        graphs.add(ties);
+
+        // Zero-weight edges, including a zero-weight chain
+        Graph zeros = new Graph(4);
+        zeros.addEdge(0, 1, 0);
+        zeros.addEdge(1, 2, 0);
+        zeros.addEdge(0, 2, 5);
+        zeros.addEdge(2, 3, 0);
+        graphs.add(zeros);
+
+        // Parallel edges: the cheaper 0 -> 1 edge (2) should win over the others
+        Graph parallel = new Graph(3);
+        parallel.addEdge(0, 1, 9);
+        parallel.addEdge(0, 1, 2);
+        parallel.addEdge(0, 1, 5);
+        parallel.addEdge(1, 2, 1);
+        graphs.add(parallel);
+
+        // Self-loops, including a zero-weight one on the source
+        Graph loops = new Graph(3);
+        loops.addEdge(0, 0, 0);
+        loops.addEdge(0, 1, 3);
+        loops.addEdge(1, 1, 2);
+        loops.addEdge(1, 2, 4);
+        graphs.add(loops);
+
+        // All of them at once (same graph the demo uses, graphs/edge-cases.txt)
+        Graph mixed = new Graph(6);
+        mixed.addEdge(0, 1, 0);
+        mixed.addEdge(0, 2, 5);
+        mixed.addEdge(0, 2, 3);
+        mixed.addEdge(1, 3, 4);
+        mixed.addEdge(2, 3, 1);
+        mixed.addEdge(3, 3, 7);
+        mixed.addEdge(3, 4, 2);
+        mixed.addEdge(5, 4, 1);
+        graphs.add(mixed);
+
+        return graphs;
+    }
+
+    /**
+     * Checks every version counts the right things (proposal section 4).
+     *
+     * Every version relaxes each edge out of a reachable vertex exactly once,
+     * so all three should report the same number of relaxations. The rest
+     * depends on the version:
+     *   array        only array scans, no queue at all
+     *   indexed-heap one insert and one extract per reachable vertex, queue never above V
+     *   lazy-heap    every insert comes out again; the extra ones are the stale skips
+     */
+    static void testCounters() {
+        Graph g = GraphGenerator.generate(300, GraphGenerator.Density.MEDIUM, 5);
+        int reachable = reachableCount(g, 0);
+
+        Counters array = Counters.on();
+        Counters indexed = Counters.on();
+        Counters lazy = Counters.on();
+        try {
+            new ArrayDijkstra().run(g, 0, array);
+            new IndexedHeapDijkstra().run(g, 0, indexed);
+            new LazyHeapDijkstra().run(g, 0, lazy);
+        } catch (UnsupportedOperationException e) {
+            System.out.println("  --    skipped: not every version is done yet");
+            return;
+        }
+
+        check(array.relaxations == g.edgeCount() && indexed.relaxations == g.edgeCount()
+                && lazy.relaxations == g.edgeCount(),
+                "all versions relax every edge once (" + g.edgeCount() + ")");
+
+        check(array.arrayScans > 0 && array.inserts == 0 && array.maxQueueSize == 0,
+                "array: only array scans, no queue");
+
+        check(indexed.inserts == reachable && indexed.extractMins == reachable
+                && indexed.staleSkipped == 0 && indexed.maxQueueSize <= g.vertexCount(),
+                "indexed-heap: one insert + extract per vertex, queue <= V");
+
+        check(lazy.extractMins == lazy.inserts && lazy.staleSkipped == lazy.inserts - reachable
+                && lazy.decreaseKeys == 0 && lazy.arrayScans == 0,
+                "lazy-heap: every insert comes out, extras are stale skips");
     }
 
     static void testVersions() {

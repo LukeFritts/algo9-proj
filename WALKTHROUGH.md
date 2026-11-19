@@ -31,18 +31,18 @@ Alex's setup (done)
 
 ## Alsean
 
-- [ ] Array version, `ArrayDijkstra.java` (steps are in the TODO)
-- [ ] Edge-case graphs in `Tests.java` → `testGraphs()`: unreachable vertices, ties, zero-weight edges, parallel edges, self-loops, one vertex
+- [x] Array version, `ArrayDijkstra.java` (Alex took it over)
+- [x] Edge-case graphs in `Tests.java` → `edgeCaseGraphs()` (Alex took it over)
 - [x] Requirements slide (Alex did it, give it a look)
 - [ ] Report, later: put it together, write intro, objectives, conclusion
 
 ## Anthony
 
-- [ ] Lazy heap version, `LazyHeapDijkstra.java` (steps are in the TODO). Call `recordQueueSize()` so the demo can show your queue size
-- [ ] Check every version counts the right things (see `Counters.java`)
-- [ ] Plots, once Luke has CSVs: time vs E (log-log) with the theory curves on top, time ratios per density, op counts, queue sizes
-- [ ] Results slides (3+)
-- [ ] Put the deck together, once everyone's slides are in
+- [x] Lazy heap version, `LazyHeapDijkstra.java` (Alex took it over)
+- [x] Check every version counts the right things, now `testCounters()` in `Tests.java` (Alex took it over)
+- [ ] Plots, once Luke has CSVs: time vs E (log-log) with the theory curves on top, time ratios per density, op counts, queue sizes (Alex taking over)
+- [ ] Results slides (Alex taking over)
+- [ ] Put the deck together (Alex taking over)
 
 ## Luke
 
@@ -50,9 +50,9 @@ Alex's setup (done)
 - [x] Benchmark harness, `Benchmark.java` (steps are in the TODO): warm up JVM, repeat runs, don't time generation or file I/O, CSV out, write down hardware / JVM version / heap settings
 - [x] Counting runs separate from timing runs (`Counters.on()` vs `Counters.off()`)
 - [x] Big graphs (V = 10k, 100k, sparse) in the benchmark
-- [ ] Check the two heaps give the same answers on those big graphs (needs Anthony's lazy heap)
+- [ ] Check the two heaps give the same answers on those big graphs (lazy heap is in now)
 - [x] Pilot run (Sun): make sure sizes work, note any time/memory limits
-- [ ] Full run (Mon), once all 3 versions pass
+- [ ] Full run: all 3 versions pass now, takes about 20 seconds
 - [ ] Repeat the main runs (Wed)
 - [ ] Results + crossover: where one version starts beating another at each density
 
@@ -60,9 +60,9 @@ Alex's setup (done)
 
 Deck is in Google Slides (ask Alex for the link). Everything's done except:
 
-- [ ] Runtime plots, theory curves on top (Anthony, needs Luke's CSVs)
-- [ ] Crossover + op counts (Luke and Anthony, needs the full run)
-- [ ] Conclusion: what we found (Alsean, needs results). Lessons learned and future work can go in now
+- [ ] Runtime plots, theory curves on top (Alex, needs Luke's CSVs)
+- [ ] Crossover + op counts (Luke and Alex, needs the full run)
+- [ ] Conclusion: what we found (Alex, needs results). Lessons learned and future work can go in now
 - [ ] Screenshot of a merged PR on the GitHub workflow slide (whoever merges first)
 
 Keep slide titles as the takeaway ("Heaps win on sparse graphs"), not just a label ("Results").
